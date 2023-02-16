@@ -182,7 +182,7 @@ class SaliencyMapMethod(EvasionAttack):
                 # Update active_indices
                 active_indices = np.where(
                     (current_pred != target)
-                    * (np.sum(all_feat, axis=1) / self._nb_features <= self.gamma)
+                    * (np.sum(all_feat, axis=1) / self._nb_features < self.gamma)
                     * (np.sum(search_space, axis=1) > 0)
                 )[0]
 
