@@ -182,7 +182,7 @@ class SaliencyMapMethod(EvasionAttack):
                 # Update active_indices
                 active_indices = np.where(
                     (current_pred != target)
-                    * (np.sum(all_feat, axis=1) / self._nb_features <= self.gamma)
+                    * (np.sum(all_feat, axis=1) / self._nb_features < self.gamma)
                     * (np.sum(search_space, axis=1) > 0)
                 )[0]
 
@@ -202,9 +202,24 @@ class SaliencyMapMethod(EvasionAttack):
         :param search_space: The set of valid pairs of feature indices to search.
         :return: The top 2 coefficients in `search_space` that maximize / minimize the saliency map.
         """
-        grads = self.estimator.class_gradient(x, label=target)
+        all_grads = self.estimator.class_gradient(x)
+        target_grads = all_grads[:,target,:]
+        mask = np.ones(all_grads.shape)
+        mask[:,target,:] = 0
+        sum_nontarget_grads = np.sum(all_grads*mask,keep_dims=True)
+        
+        # Mask saliency map gradients base on sign of theta       
+        if self.theta > 0:
+            target_grads[targets_grads<0] = 0
+            sum_nontarget_grads[sum_nontarget_grads>0] = 0
+            grads = target_grads*np.abs(sum_target_grads)
+        else:
+            target_grads[targets_grads>0] = 0
+            sum_nontarget_grads[sum_nontarget_grads<0] = 0
+            grads = np.abs(target_grads)*sum_target_grads
+        
         grads = np.reshape(grads, (-1, self._nb_features))
-
+        
         # Remove gradients for already used features
         used_features = 1 - search_space
         coeff = 2 * int(self.theta > 0) - 1
